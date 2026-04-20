@@ -4,12 +4,12 @@ const { callGemini } = require('../services/gemini');
 const { createHeyGenVideo } = require('../services/heygen');
 const { generatePptx } = require('../services/pptxgen');
 const { createShortLink } = require('../services/shortlink');
-const pool = require('../db/db');
+const { Proposal } = require('../db/models');
 
 const router = express.Router();
 
 const limiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
+  windowMs: 60 * 60 * 1000,
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
@@ -38,7 +38,6 @@ router.post('/', limiter, async (req, res) => {
 
   const { proposalText, videoScript, slides } = geminiData;
 
-  // Generate slug for pptx
   const pptxSlugRaw = Math.random().toString(36).slice(2, 10);
   let pptxPath;
   try {
@@ -49,11 +48,8 @@ router.post('/', limiter, async (req, res) => {
   }
 
   const shortDomain = process.env.SHORT_DOMAIN || `http://localhost:${process.env.PORT || 3001}`;
-  const pptxPublicUrl = `/p/${pptxSlugRaw}`; // serves file directly
-
   const pptxSlug = await createShortLink(`${shortDomain}/public/files/${pptxSlugRaw}.pptx`, 'pptx');
 
-  // HeyGen video generation (non-blocking on timeout)
   let videoUrl = null;
   let videoSlug = null;
   let status = 'complete';
@@ -70,24 +66,25 @@ router.post('/', limiter, async (req, res) => {
     status = 'video_processing';
   }
 
-  // Save to DB
-  const dbResult = await pool.query(
-    `INSERT INTO proposals
-      (job_description, proposal_text, video_url, pptx_path, video_slug, pptx_slug, status)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
-     RETURNING id`,
-    [trimmed, proposalText, videoUrl, pptxPath, videoSlug, pptxSlug, status]
-  );
+  const saved = await Proposal.create({
+    job_description: trimmed,
+    proposal_text:   proposalText,
+    video_url:       videoUrl,
+    pptx_path:       pptxPath,
+    video_slug:      videoSlug,
+    pptx_slug:       pptxSlug,
+    status,
+  });
 
   const videoShortLink = videoSlug ? `${shortDomain}/v/${videoSlug}` : null;
-  const pptxShortLink = `${shortDomain}/p/${pptxSlug}`;
+  const pptxShortLink  = `${shortDomain}/p/${pptxSlug}`;
 
   return res.json({
     proposalText,
     videoShortLink,
     pptxShortLink,
     status,
-    id: dbResult.rows[0].id,
+    id: saved._id,
   });
 });
 

@@ -1,4 +1,3 @@
-@ -1,187 +1 @@
 # Upwork Proposal Generator
 
 A full-stack web app that turns any Upwork job description into a polished proposal, a PowerPoint slide deck, and a personalized HeyGen avatar video — all in under 2 minutes.
@@ -9,18 +8,18 @@ A full-stack web app that turns any Upwork job description into a polished propo
 |---|---|
 | Frontend | React 18 + Vite + TailwindCSS |
 | Backend | Node.js + Express |
-| Database | PostgreSQL (via `pg`) |
+| Database | MongoDB (via Mongoose) |
 | AI text | Google Gemini 2.0 Flash |
 | AI video | HeyGen API |
 | Slides | pptxgenjs (server-side) |
-| Short links | Custom slug table in PostgreSQL |
+| Short links | Custom slug collection in MongoDB |
 
 ---
 
 ## Prerequisites
 
 - Node.js 18+
-- PostgreSQL 14+ (running locally or remote)
+- MongoDB 6+ (local) or a free [MongoDB Atlas](https://www.mongodb.com/atlas) cluster
 - A Google Gemini API key
 - A HeyGen API key with an avatar and voice configured
 
@@ -58,18 +57,26 @@ cp .env.example .env
 | `HEYGEN_AVATAR_ID` | [HeyGen Avatars list](https://docs.heygen.com/reference/list-avatars-v2) or your dashboard |
 | `HEYGEN_VOICE_ID` | [HeyGen Voices list](https://docs.heygen.com/reference/list-voices-v2) |
 | `SHORT_DOMAIN` | Your public server URL, e.g. `https://go.yourdomain.com` |
-| `DATABASE_URL` | PostgreSQL connection string |
+| `MONGODB_URI` | `mongodb://localhost:27017/proposals_db` or Atlas connection string |
 | `PORT` | Server port (default: `3001`) |
 
-### 3. Set up the database
+### 3. Start MongoDB
 
+**Local:**
 ```bash
-# Create the database
-createdb proposals_db
+# macOS (Homebrew)
+brew services start mongodb-community
 
-# Run schema
-psql proposals_db < server/db/schema.sql
+# Windows
+net start MongoDB
+
+# Linux
+sudo systemctl start mongod
 ```
+
+**Atlas (cloud):** No setup needed — just paste your connection string into `MONGODB_URI`.
+
+> Collections and indexes are created automatically by Mongoose on first run.
 
 ### 4. Run locally
 
@@ -119,9 +126,6 @@ Short links take the form:
 ```bash
 # Build the frontend
 cd client && npm run build
-
-# Serve static files from Express (add to server/index.js if needed):
-# app.use(express.static(path.join(__dirname, '../client/dist')));
 
 # Start the server
 cd server && npm start
@@ -180,8 +184,8 @@ cd server && npm start
     pptxgen.js       PowerPoint rendering
     shortlink.js     Slug generation + DB
   /db
-    schema.sql       CREATE TABLE statements
-    db.js            pg Pool
+    db.js            Mongoose connection
+    models.js        Proposal + ShortLink schemas
   /public/files      Generated .pptx files (auto-created)
   index.js
   .env.example
