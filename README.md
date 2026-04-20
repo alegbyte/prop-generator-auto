@@ -1,3 +1,4 @@
+@ -1,187 +1 @@
 # Upwork Proposal Generator
 
 A full-stack web app that turns any Upwork job description into a polished proposal, a PowerPoint slide deck, and a personalized HeyGen avatar video — all in under 2 minutes.
