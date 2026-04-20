@@ -1,11 +1,8 @@
-const { Pool } = require('pg');
+const mongoose = require('mongoose');
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
+async function connectDB() {
+  await mongoose.connect(process.env.MONGODB_URI);
+  console.log('MongoDB connected');
+}
 
-pool.on('error', (err) => {
-  console.error('Unexpected PostgreSQL client error', err);
-});
-
-module.exports = pool;
+module.exports = connectDB;
